@@ -1,0 +1,61 @@
+-- A valid level must have one of each of the following tokens:
+-- 1,2,B,R
+-- When you add a level make sure its solvable!
+
+--Levels Legend:
+-- 1 : Player 1 Respawn Spot
+-- 2 : Player 2 Respawn Spot
+-- W : Wall
+-- O : Rock (Pushable)
+-- B : Player 2 Goal
+-- R : Player 1 Goal
+-- 9 : Green Switch -> ( : Green Button
+-- 8 : Purple Switch -> * : Purple Button
+-- 7 : Red Switch -> & : Red Button
+-- 6 : Yellow Switch -> ^ : Yellow Button
+
+--Each Level needs a blank line before next level
+
+--Level 0
+WWWWWWWWWWWWWWWW%
+W1  O(9       BW%
+W             GW%
+W      P       W%
+W O    2       W%
+W              W%
+W              W%
+W          p   W%
+WWWWWWWWWWWWWWWW%
+
+-Level 1
+WWWWWWWWWWWWWWWW%
+W    9   (   1BW%
+W    WW9WWWO O W%
+W    W    W  P W%
+W O  W ^  O    W%
+WWW8WW    WWWWWW%
+W O* WWO WW p 2W%
+W        6    GW%
+WWWWWWWWWWWWWWWW%
+
+-Level 2
+WWWWWWWWWWWWWWWW%
+WWWWWB  W      W%
+W1   OW W      W%
+WWOWWO  O   O  W%
+W O W   WWWWOWWW%
+W   WW   W     W%
+W    W   W     W%
+W    O  2OO   GW%
+WWWWWWWWWWWWWWWW%
+
+-Level 3
+WWWWWWWWWWWWWWWW%
+W  1   O       W%
+W     O O      W%
+WWWW  O O      W%
+W G   O O  B   W%
+W    OO OO     W%
+W   O  O  O    W%
+W    OO OO 2   W%
+WWWWWWWWWWWWWWWW%
