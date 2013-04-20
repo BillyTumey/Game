@@ -13,6 +13,7 @@ SCREENHEIGHT = 13*TILEHEIGHT
 SCREENWIDTH = 24*TILEWIDTH # 16:9 aspect ratio
 
 #Initialize 
+imageFolder = "images/"
 pygame.init()
 pygame.display.set_caption(TITLE)
 SCREEN = pygame.display.set_mode((SCREENWIDTH, SCREENHEIGHT))
@@ -46,7 +47,7 @@ class Portal:
     def __init__(self,pos,portalNum):
         self.portalNum = portalNum
         self.x,self.y = pos[0],pos[1]
-        self.image = pygame.image.load('portal.png')
+        self.image = pygame.image.load(os.path.join(imageFolder,'portal.png'))
         self.otherPortal = None
         appendToBucket(PortalDict,portalNum,self)
         
@@ -79,7 +80,7 @@ class Switch:
         self.color = color
         self.x = pos[0]
         self.y = pos[1]
-        self.image = pygame.image.load('switch{0}.png'.format(color))
+        self.image = pygame.image.load(os.path.join(imageFolder,'switch{0}.png'.format(color)))
         self.active = True
         appendToBucket(SwitchDict,color,self)
         
@@ -88,10 +89,10 @@ class Switch:
         
     def setStatus(self,active):
         if (self.active == True and active == False):
-            self.image = pygame.image.load('tile.png')
+            self.image = pygame.image.load(os.path.join(imageFolder,'tile.png'))
             self.active = active
         elif (self.active == False and active == True):
-            self.image = pygame.image.load('switch{0}.png'.format(self.color))
+            self.image = pygame.image.load(os.path.join(imageFolder,'switch{0}.png'.format(self.color)))
             self.active = active
             
     def checkStatus(self):
@@ -107,7 +108,7 @@ class Wall:
     def __init__(self,pos):
         self.x = pos[0]
         self.y = pos[1]
-        self.image = pygame.image.load('wall.png')
+        self.image = pygame.image.load(os.path.join(imageFolder,'wall.png'))
         Walls.append(self)
         
     def position(self):
@@ -117,7 +118,7 @@ class Button:
     def __init__(self,pos,color):
         self.color = color
         self.x,self.y = pos[0],pos[1]
-        self.image = pygame.image.load('button{0}.png'.format(color))
+        self.image = pygame.image.load(os.path.join(imageFolder,'button{0}.png'.format(color)))
         Buttons.append(self)
         
     def position(self):
@@ -129,7 +130,7 @@ class Lever:
         self.leverNum = leverNum
         self.direction = direction
         self.x,self.y = pos[0],pos[1]
-        self.image = pygame.image.load('lever{0}.png'.format(direction))
+        self.image = pygame.image.load(os.path.join(imageFolder,'lever{0}.png'.format(direction)))
         appendToBucket(LeverDict,leverNum,self)
         
     def position(self):
@@ -140,7 +141,7 @@ class Lever:
             self.direction = LEFT
         else:
             self.direction = RIGHT
-        self.image = pygame.image.load('lever{0}.png'.format(self.direction))
+        self.image = pygame.image.load(os.path.join(imageFolder,'lever{0}.png'.format(self.direction)))
     
     def checkUse(self):
         for p in Players:
@@ -159,7 +160,7 @@ class Goal:
     def __init__(self,pos,color):
         self.x = pos[0]
         self.y = pos[1]
-        self.image = pygame.image.load('goal{0}.png'.format(color))
+        self.image = pygame.image.load(os.path.join(imageFolder,'goal{0}.png'.format(color)))
         Goals.append(self)
     def position(self):
         return (self.x,self.y)
@@ -170,7 +171,7 @@ class Movable:
         self.imageName = imageName
         self.x,self.y = pos[0],pos[1]
         self.playable = playable
-        self.image = pygame.image.load('{0}.png'.format(imageName))
+        self.image = pygame.image.load(os.path.join(imageFolder,'{0}.png'.format(imageName)))
         self.toMove = False
         if playable:
             Players.append(self)
@@ -180,7 +181,7 @@ class Movable:
     def setDirection(self,direction):
         self.direction = direction
         if (self.playable and direction != None):
-            self.image = pygame.image.load('{0}{1}.png'.format(self.imageName,direction))
+            self.image = pygame.image.load(os.path.join(imageFolder,'{0}{1}.png'.format(self.imageName,direction)))
           
     def move_single_axis(self,dx,dy):
         self.x += dx
@@ -427,7 +428,7 @@ def isLevelCompleted():
              and (player2.position() == player2Goal.position()) )
 
 def floodTiles(): #TODO - find a way to surround the area with walls if they're not in the levels
-    tile = pygame.image.load('tile.png')
+    tile = pygame.image.load(os.path.join(imageFolder,'tile.png'))
     for tileSpot in TILES:
         SCREEN.blit(tile,tileSpot)
             
