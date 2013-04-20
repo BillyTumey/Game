@@ -17,14 +17,16 @@
 --Each Level needs a blank line before next level
 
 --Level 0
-WWWWWWWWWWWWWWWW%
-W1  O(9       BW%
-W             GW%
-W      P       W%
+WWWWWWWWWWWWWWWWWW%
+W1  O(9         BWWW%
+W                 GW%
+W      P       WWWWW%
 W O    2       W%
-W              W%
+W    L   l     W%
 W              W%
 W          p   W%
+WWWWWWWWWWWWWWWW%
+WWWWWWWWWWWWWWWW%
 WWWWWWWWWWWWWWWW%
 
 -Level 1

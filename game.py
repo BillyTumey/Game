@@ -9,8 +9,8 @@ FPS = 60
 TITLE = "Push Rocks 'n Shit"
 TILEHEIGHT = 32 #Tile size is 32x32
 TILEWIDTH = 32 
-SCREENHEIGHT = 9*TILEHEIGHT
-SCREENWIDTH = 20*TILEWIDTH # 16:9 aspect ratio
+SCREENHEIGHT = 13*TILEHEIGHT
+SCREENWIDTH = 24*TILEWIDTH # 16:9 aspect ratio
 
 #Initialize 
 pygame.init()
@@ -18,6 +18,7 @@ pygame.display.set_caption(TITLE)
 SCREEN = pygame.display.set_mode((SCREENWIDTH, SCREENHEIGHT))
 
 #Dictionary Key Constants
+LeverNums = ['Lever1']
 Colors = ["green","purple","red","yellow"]
 PortalNums = ["Portal1","Portal2","Portal3","Portal4"]
 
@@ -32,9 +33,10 @@ levels = []
 levelNumber = 0
 
 #Each Level contains these things
+TILES = []
+xOffset,yOffset = 0,0
 Buttons,Walls,Players,Movables,Goals = [],[],[],[],[]
-PortalDict = {'Portal1': [], 'Portal2': [], 'Portal3': [], 'Portal4':[]}
-SwitchDict = {'red': [], 'green': [], 'purple': [], 'yellow':[]}
+PortalDict,SwitchDict,LeverDict = {},{},{}
 player1,player2,player1Goal,player2Goal = None,None,None,None
 keyPressed,performedAction = False, False
 
@@ -43,8 +45,7 @@ keyPressed,performedAction = False, False
 class Portal:
     def __init__(self,pos,portalNum):
         self.portalNum = portalNum
-        self.x = pos[0]
-        self.y = pos[1]
+        self.x,self.y = pos[0],pos[1]
         self.image = pygame.image.load('portal.png')
         self.otherPortal = None
         appendToBucket(PortalDict,portalNum,self)
@@ -63,9 +64,15 @@ class Portal:
         global performAction
         for p in Players:
             if (self.position() == p.position() and not p.teleported): #Player standing on the portal
-                p.x = self.otherPortal.x 
-                p.y = self.otherPortal.y
-                p.teleported = True
+                #Can't teleport to a spot if there's a rock on the other portal
+                is_rock_on_spot = False
+                for m in Movables:
+                    if (self.otherPortal.position() == m.position()):
+                        is_rock_on_spot = True
+                if not is_rock_on_spot:
+                    p.x = self.otherPortal.x 
+                    p.y = self.otherPortal.y
+                    p.teleported = True
                 
 class Switch:
     def __init__(self,pos,color):
@@ -102,19 +109,52 @@ class Wall:
         self.y = pos[1]
         self.image = pygame.image.load('wall.png')
         Walls.append(self)
+        
     def position(self):
         return (self.x,self.y)
     
 class Button:
     def __init__(self,pos,color):
         self.color = color
-        self.x = pos[0]
-        self.y = pos[1]
+        self.x,self.y = pos[0],pos[1]
         self.image = pygame.image.load('button{0}.png'.format(color))
         Buttons.append(self)
+        
     def position(self):
         return (self.x,self.y)
-
+    
+class Lever:
+    def __init__(self,pos,direction,leverNum):
+        self.justChanged = False
+        self.leverNum = leverNum
+        self.direction = direction
+        self.x,self.y = pos[0],pos[1]
+        self.image = pygame.image.load('lever{0}.png'.format(direction))
+        appendToBucket(LeverDict,leverNum,self)
+        
+    def position(self):
+        return (self.x,self.y)
+    
+    def changeDirection(self):
+        if self.direction == RIGHT:
+            self.direction = LEFT
+        else:
+            self.direction = RIGHT
+        self.image = pygame.image.load('lever{0}.png'.format(self.direction))
+    
+    def checkUse(self):
+        for p in Players:
+            if p.x == self.x:
+                if ( (p.y + TILEHEIGHT == self.y) and p.direction == DOWN):
+                    self.changeDirection()
+                elif ( (p.y - TILEHEIGHT == self.y) and p.direction == UP):
+                    self.changeDirection()
+            if p.y == self.y:
+                if ( (p.x + TILEWIDTH == self.x) and p.direction == RIGHT):
+                    self.changeDirection()
+                elif ( (p.x - TILEWIDTH == self.x) and p.direction == LEFT):
+                    self.changeDirection()                
+                 
 class Goal:
     def __init__(self,pos,color):
         self.x = pos[0]
@@ -128,8 +168,7 @@ class Movable:
     def __init__(self,imageName,pos,playable):
         self.direction = None
         self.imageName = imageName
-        self.x = pos[0]
-        self.y = pos[1]
+        self.x,self.y = pos[0],pos[1]
         self.playable = playable
         self.image = pygame.image.load('{0}.png'.format(imageName))
         self.toMove = False
@@ -185,6 +224,13 @@ class Movable:
                     return True
         return False
     
+    def checkLeverCollisions(self,dx,dy):
+        for Levers in LeverDict.itervalues():
+            for l in Levers:
+                if ( (self.y + dy == l.y) and (self.x + dx == l.x)):
+                    return True
+        return False
+    
     def checkWallCollisions(self,dx,dy):
         for w in Walls:
             if ( (self.y + dy == w.y) and (self.x + dx == w.x) ):
@@ -202,7 +248,8 @@ class Movable:
         return ( self.boundaryCheck(dx,dy) 
                 and ( not self.checkPlayerCollisions(dx,dy) 
                 and (not self.checkWallCollisions(dx,dy) ))
-                and (not self.checkSwitchCollisions(dx,dy)) )
+                and (not self.checkSwitchCollisions(dx,dy)) 
+                and (not self.checkLeverCollisions(dx,dy)))
             
     def move(self):
         dx,dy = 0,0
@@ -218,8 +265,7 @@ class Movable:
             self.pushMovable(dx,dy)
             if (not self.checkMovableCollisions(dx,dy)):
                 self.move_single_axis(dx,dy)
-
-
+                
 def terminate():
     pygame.quit()
     sys.exit()
@@ -246,16 +292,19 @@ def readLevelsFile(filename):
     
     
 def resetGlobals():
-    global Players,Movables,Goals,Walls,Buttons
-    global PortalDict, SwitchDict
-    global Colors, PortalNums
+    global xOffset,yOffset
+    global Players,Movables,Goals,Walls,Buttons,TILES
+    global PortalDict, SwitchDict, LeverDict
     global player1,player2,player1Goal,player2Goal
+    xOffset,yOffset = 0,0
     player1,player2,player1Goal,player2Goal = None,None,None,None
     PortalDict = {'Portal1': [], 'Portal2': [], 'Portal3': [], 'Portal4':[]}
     SwitchDict = {'red': [], 'green': [], 'purple': [], 'yellow':[]}
-    Players,Movables,Goals,Walls,Buttons = [],[],[],[],[]
+    LeverDict = {'Lever1': []}
+    Players,Movables,Goals,Walls,Buttons,TILES = [],[],[],[],[],[]
     assert(set(Colors) == set(SwitchDict.keys()))
     assert(set(PortalNums) == set(PortalDict.keys()))    
+    assert(set(LeverNums) == set(LeverDict.keys()))
 
 def appendToBucket(Dict, key, val):
     temp = Dict[key]
@@ -266,7 +315,7 @@ def appendToBucket(Dict, key, val):
 def populateLevel(levelNumber):
     global player1,player2,player1Goal,player2Goal
     resetGlobals()
-    x,y = 0,0
+    (x,y) = adjustOffsets()
     for row in levels[levelNumber]:
         for col in row:
             if col == "W":
@@ -323,10 +372,19 @@ def populateLevel(levelNumber):
                 Portal((x,y),"Portal1")
             elif col == "p": #Portal 1 End
                 Portal((x,y),"Portal1")
+                
+            #Ensure that all maps have corresponding Levers!
+            elif col == "L": #Lever 1
+                Lever((x,y),RIGHT,"Lever1")
+            elif col == "l": #Lever 1
+                Lever((x,y),RIGHT,"Lever1")
+            
+            if col != "%":
+                TILES.append((x,y))
               
             x += TILEWIDTH
         y += TILEHEIGHT
-        x = 0
+        x = xOffset
         
     assertLevelCorrectness()
     
@@ -335,6 +393,20 @@ def populateLevel(levelNumber):
         for p in Portals:
             p.findOtherPortal()
             
+def adjustOffsets():     
+    global xOffset,yOffset
+    levelHeight = len(levels[levelNumber])
+    maxWidth = -1
+    for row in levels[levelNumber]:
+        if len(row) > maxWidth:
+            maxWidth = len(row)
+    levelWidth = maxWidth-1
+    #SCREENHEIGHT = 18*TILEHEIGHT
+    #SCREENWIDTH = 32*TILEWIDTH # 16:9 aspect ratio
+    xOffset = (SCREENWIDTH - levelWidth*TILEWIDTH)/2
+    yOffset = (SCREENHEIGHT - levelHeight*TILEHEIGHT)/2
+    return (xOffset,yOffset)
+
 def assertLevelCorrectness():
     try:
         assert((player1 != None) and (player2 != None))
@@ -354,15 +426,14 @@ def isLevelCompleted():
     return ( (player1.position() == player1Goal.position()) 
              and (player2.position() == player2Goal.position()) )
 
-def floodTiles():
+def floodTiles(): #TODO - find a way to surround the area with walls if they're not in the levels
     tile = pygame.image.load('tile.png')
-    for x in range(0,SCREENWIDTH,TILEWIDTH):
-        for y in range(0,SCREENHEIGHT,TILEHEIGHT):
-            SCREEN.blit(tile,(x,y))
+    for tileSpot in TILES:
+        SCREEN.blit(tile,tileSpot)
             
 def fillScreen():
+    SCREEN.fill((0,0,0))
     floodTiles()
-    
     for wall in Walls:
         SCREEN.blit(wall.image,wall.position())
         
@@ -374,6 +445,13 @@ def fillScreen():
     for button in Buttons:
         SCREEN.blit(button.image,button.position())
         
+    for Levers in LeverDict.itervalues():
+        for l in Levers:
+            if keyPressed and performAction:
+                l.checkUse()
+            l.justChanged = False
+            SCREEN.blit(l.image,l.position())
+            
     for Portals in PortalDict.itervalues():
         for p in Portals:
             if keyPressed and performAction:
@@ -401,7 +479,6 @@ def main():
     while True: #Main game loop
         #Reset player movement
         for p in Players:
-            p.setDirection(None)
             p.toMove = False
         performAction = False
         keyPressed = False
@@ -412,63 +489,73 @@ def main():
                 terminate()
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                 terminate()
-            
-            #Handle Keyboard
-            elif event.type == pygame.KEYDOWN:
-                #Player 1 uses Arrows
+                
+            #Handle Keyboard events
+            elif event.type == pygame.KEYDOWN: 
                 keyPressed = True
-                if event.key == K_LEFT:
+                keys = pygame.key.get_pressed()
+                #Player 1
+                if keys[K_LEFT]:
                     player1.setDirection(LEFT)
-                    player1.toMove = True
-                elif event.key == K_RIGHT:
+                    if not keys[K_LSHIFT]:
+                        player1.toMove = True
+                elif keys[K_RIGHT]:
                     player1.setDirection(RIGHT)
-                    player1.toMove = True
-                elif event.key == K_UP:
+                    if not keys[K_LSHIFT]:
+                        player1.toMove = True
+                elif keys[K_UP]:
                     player1.setDirection(UP)
-                    player1.toMove = True
-                elif event.key == K_DOWN:
+                    if not keys[K_LSHIFT]:
+                        player1.toMove = True
+                elif keys[K_DOWN]:
                     player1.setDirection(DOWN)
-                    player1.toMove = True
-                #Player 2 uses WSAD
-                elif event.key == K_a:
+                    if not keys[K_LSHIFT]:
+                        player1.toMove = True
+                #Player 2
+                if keys[K_a]:
                     player2.setDirection(LEFT)
-                    player2.toMove = True
-                elif event.key == K_d:
+                    if not keys[K_LSHIFT]:
+                        player2.toMove = True
+                elif keys[K_d]:
                     player2.setDirection(RIGHT)
-                    player2.toMove = True
-                elif event.key == K_w:
+                    if not keys[K_LSHIFT]:
+                        player2.toMove = True
+                elif keys[K_w]:
                     player2.setDirection(UP)
-                    player2.toMove = True
-                elif event.key == K_s:
+                    if not keys[K_LSHIFT]:
+                        player2.toMove = True
+                elif keys[K_s]:
                     player2.setDirection(DOWN)
-                    player2.toMove = True
-                elif event.key == K_SPACE:
-                    performAction = True
-                    
-                if event.key == K_n: #Next Level
+                    if not keys[K_LSHIFT]:
+                        player2.toMove = True   
+                        
+                #Handle Actions and Level Navigation
+                elif keys[K_b]:
+                    if (levelNumber -1 >= 0):
+                        levelNumber -= 1
+                        populateLevel(levelNumber)
+                elif keys[K_n]:
                     if (levelNumber + 1 < len(levels)):
                         levelNumber += 1
                         populateLevel(levelNumber)
-                elif event.key == K_b: #Previous Level
-                    if (levelNumber - 1 >= 0 ):
-                        levelNumber -= 1
-                        populateLevel(levelNumber)
-                elif event.key == K_r:
-                    populateLevel(levelNumber) #Reset Level
-                    
-            #Check if the level is completed
-            if (isLevelCompleted()):
-                if (levelNumber + 1 < len(levels)):
-                    levelNumber += 1
+                elif keys[K_r]:
                     populateLevel(levelNumber)
-                else:
-                    print "You beat the game!"
-                    terminate()
+                elif keys[K_SPACE]:
+                    performAction = True
+                     
+        #Check if the level is completed
+        if (isLevelCompleted()):
+            if (levelNumber + 1 < len(levels)):
+                levelNumber += 1
+                populateLevel(levelNumber)
+            else:
+                print "You beat the game!"
+                terminate()
             
             #Update the display
-            fillScreen()    
-            pygame.display.update() 
-            FPSCLOCK.tick(FPS)
+        fillScreen()    
+        pygame.display.update() 
+        FPSCLOCK.tick(FPS)
             
 if __name__ == '__main__':
     main()
