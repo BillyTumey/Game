@@ -31,6 +31,7 @@ RIGHT = 'right'
 
 #Will be filled from the parsed file "levels.txt"
 levels = []
+portals = []
 levelNumber = 0
 
 #Each Level contains these things
@@ -277,20 +278,31 @@ def readLevelsFile(filename):
     # Each level must end with a blank line
     content = mapFile.readlines() + ['\r\n']
     mapFile.close()
-    levels = []
-    mapLines = []
+    levels, portals = [],[]
+    mapLines, mapPortals = [],{}
     for lineNum in range(len(content)):
         line = content[lineNum].rstrip('\r\n')
+        if '>>' in line:
+            #This line contains portal information
+            portalData = line.strip('>')
+            key = int(portalData.split(":")[0])
+            portalLocations = []
+            for portalLocation in portalData.split(":")[1].split(";"):
+                x,y = map(int, portalLocation.strip().replace('(', "").replace(')',"").split(',')) #value stripping
+                portalLocations.append((x,y))
+            mapPortals[key] = portalLocations
         if '-' in line:
             #This is the comment of a the levels file
             pass
         if '%' in line: #This line is part of a level
             mapLines.append(line)
         elif line == '' and len(mapLines) > 0:
+            portals.append(mapPortals)
+            mapPortals = {}
             levels.append(mapLines)
             mapLines = [] #reset it for the next level
-    return levels
     
+    return (levels,portals)
     
 def resetGlobals():
     global xOffset,yOffset
@@ -299,24 +311,37 @@ def resetGlobals():
     global player1,player2,player1Goal,player2Goal
     xOffset,yOffset = 0,0
     player1,player2,player1Goal,player2Goal = None,None,None,None
-    PortalDict = {'Portal1': [], 'Portal2': [], 'Portal3': [], 'Portal4':[]}
+    PortalDict = {}
     SwitchDict = {'red': [], 'green': [], 'purple': [], 'yellow':[]}
     LeverDict = {'Lever1': []}
     Players,Movables,Goals,Walls,Buttons,TILES = [],[],[],[],[],[]
-    assert(set(Colors) == set(SwitchDict.keys()))
-    assert(set(PortalNums) == set(PortalDict.keys()))    
+    #TODO - MAYBE REWRITE THE SETS AND SWITCHES TO WORK LIKE PORTALS?
+    assert(set(Colors) == set(SwitchDict.keys()))   
     assert(set(LeverNums) == set(LeverDict.keys()))
 
 def appendToBucket(Dict, key, val):
-    temp = Dict[key]
+    try:
+        temp = Dict[key] #The key exists - get the existing bucket
+    except KeyError:
+        temp = [] #The key doesn't already exist - make a new empty bucket
     temp.append(val)
     Dict[key] = temp
-        
+    
+def setupLevelPortals(levelNumber):
+    this_levels_portals = portals[levelNumber]
+    for key in this_levels_portals:
+        portalLocations = this_levels_portals[key]
+        for p in portalLocations:
+            x,y = p
+            Portal((x*32+xOffset,y*32+yOffset),key)
+            
 #Fills the map with the proper objects needed to display the level
 def populateLevel(levelNumber):
     global player1,player2,player1Goal,player2Goal
     resetGlobals()
     (x,y) = adjustOffsets()
+    setupLevelPortals(levelNumber)
+    
     for row in levels[levelNumber]:
         for col in row:
             if col == "W":
@@ -367,13 +392,20 @@ def populateLevel(levelNumber):
                 Switch((x,y),"yellow")
             elif col == "^": #yellow button
                 Button((x,y),"yellow")
-                
-            #Ensure that all maps have corresponding Portals!
-            elif col == "P": #Portal 1
-                Portal((x,y),"Portal1")
-            elif col == "p": #Portal 1 End
-                Portal((x,y),"Portal1")
-                
+                    
+            elif col == "@":
+                check = False
+                for portal in PortalDict.itervalues():
+                    for p in portal:
+                        if ( (x,y) == p.position() ):
+                            check = True
+                try:
+                    assert(check)
+                except:
+                    print "Level Design Error on Level {0}".format(levelNumber)
+                    print "Your level mapping and coordinate information does not coincide."
+                    terminate()
+                                 
             #Ensure that all maps have corresponding Levers!
             elif col == "L": #Lever 1
                 Lever((x,y),RIGHT,"Lever1")
@@ -412,14 +444,14 @@ def assertLevelCorrectness():
     try:
         assert((player1 != None) and (player2 != None))
     except AssertionError:
-        print "Assertion Error on Level {0}".format(levelNumber)
+        print "Level Design Error on Level {0}".format(levelNumber)
         print "Need to have Player 1 and Player 2 placed on the map."
         terminate()
               
     try:
         assert((player1Goal != None) and (player2Goal != None))
     except AssertionError:
-        print "Assertion Error on Level {0}".format(levelNumber)
+        print "Level Design Error on Level {0}".format(levelNumber)
         print "Need to have Player 1 Goal and Player 2 Goal on the map."
         terminate()    
                     
@@ -473,8 +505,8 @@ def fillScreen():
         
 
 def main():
-    global levelNumber, levels, keyPressed, FPSCLOCK, performAction
-    levels = readLevelsFile('levels.txt') #Populate the levels
+    global levelNumber, levels, keyPressed, FPSCLOCK, performAction, portals
+    levels, portals = readLevelsFile('levels.txt') #Populate the levels
     populateLevel(0) #Start at level 0
     FPSCLOCK = pygame.time.Clock()
     while True: #Main game loop

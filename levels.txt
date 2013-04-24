@@ -13,21 +13,25 @@
 -- 8 : Purple Switch -> * : Purple Button
 -- 7 : Red Switch -> & : Red Button
 -- 6 : Yellow Switch -> ^ : Yellow Button
+-- @ : Portal
 
---Each Level needs a blank line before next level
+-- Each Level needs a blank line before next level
+-- Your portal locations must match the coordinate information you provide
 
 --Level 0
 WWWWWWWWWWWWWWWWWW%
-W1  O(9         BWWW%
+W2  O(9        @BWWW%
 W                 GW%
-W      P       WWWWW%
-W O    2       W%
-W    L   l     W%
+W      @@@     WWWWW%
+W O    1       W%
+W    L   L     W%
 W              W%
-W          p   W%
+W   @      @@@ W%
 WWWWWWWWWWWWWWWW%
-WWWWWWWWWWWWWWWW%
-WWWWWWWWWWWWWWWW%
+>> 1:(7,3);(11,7)    
+>> 2:(8,3);(12,7) 
+>> 3:(9,3);(13,7)
+>> 4:(15,1);(4,7)
 
 -Level 1
 WWWWWWWWWWWWWWWW%
