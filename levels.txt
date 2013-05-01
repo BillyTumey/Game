@@ -1,47 +1,45 @@
--- A valid level must have one of each of the following tokens:
--- 1,2,B,R
--- When you add a level make sure its solvable!
+-- Level Construction --
+- 1 : Player1
+- 2 : Player2
+- @ : Portal (Must provide coinciding coordinates!)
+- O : Movable Rock
+- L : Lever (Currently has no function)
+- Yellow Button: Y <-> Yellow Wall: y
+- Purple Button: P <-> Purple Wall: p
+- Red Button: R <-> Red Wall: r
 
---Levels Legend:
--- 1 : Player 1 Respawn Spot
--- 2 : Player 2 Respawn Spot
--- W : Wall
--- O : Rock (Pushable)
--- B : Player 2 Goal
--- R : Player 1 Goal
--- 9 : Green Switch -> ( : Green Button
--- 8 : Purple Switch -> * : Purple Button
--- 7 : Red Switch -> & : Red Button
--- 6 : Yellow Switch -> ^ : Yellow Button
--- @ : Portal
+-- How to Create Portals --
+-  1. Place a portal on the map.
+-  2. Count the coordinates. The upper left corner is 0,0. 
+-  3. First count right (x), then count down (y). Coordinate =(x,y)
 
--- Each Level needs a blank line before next level
--- Your portal locations must match the coordinate information you provide
+WWWWWWWW%
+W@B12G@W%
+WWWWWWWW%
+>> 1:(1,1);(6,1)
 
 --Level 0
 WWWWWWWWWWWWWWWWWW%
-W2  O(9        @BWWW%
-W                 GW%
-W      @@@     WWWWW%
+W@  OY  y     B WWW%
+W @     y        GW%
+W              WWWW%
 W O    1       W%
 W    L   L     W%
-W              W%
-W   @      @@@ W%
+W  2           W%
+W      @@      W%
 WWWWWWWWWWWWWWWW%
->> 1:(7,3);(11,7)    
->> 2:(8,3);(12,7) 
->> 3:(9,3);(13,7)
->> 4:(15,1);(4,7)
+>> 1:(1,1);(2,2)
+>> 2:(7,7);(8,7)
 
 -Level 1
 WWWWWWWWWWWWWWWW%
-W    9   (   1BW%
-W    WW9WWWO O W%
-W    W    W  P W%
-W O  W ^  O    W%
-WWW8WW    WWWWWW%
-W O* WWO WW p 2W%
-W        6    GW%
+W    y   Y   1BW%
+W    WWyWWWO O W%
+W    W    W    W%
+W O  W P  O    W%
+WWWrWW    WWWWWW%
+W OR WWO WW   2W%
+W        p    GW%
 WWWWWWWWWWWWWWWW%
 
 -Level 2

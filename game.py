@@ -1,7 +1,6 @@
 # Author - Billy Tumey
 # Created 4/18/2013
 
-#------ Globals ------#
 import random, sys, copy, os, pygame
 from pygame.locals import *
 
@@ -18,32 +17,13 @@ pygame.init()
 pygame.display.set_caption(TITLE)
 SCREEN = pygame.display.set_mode((SCREENWIDTH, SCREENHEIGHT))
 
-#Dictionary Key Constants
-LeverNums = ['Lever1']
-Colors = ["green","purple","red","yellow"]
-PortalNums = ["Portal1","Portal2","Portal3","Portal4"]
-
 #Directional Constants
 UP = 'up'
 DOWN = 'down'
 LEFT = 'left'
 RIGHT = 'right'
 
-#Will be filled from the parsed file "levels.txt"
-levels = []
-portals = []
-levelNumber = 0
-
-#Each Level contains these things
-TILES = []
-xOffset,yOffset = 0,0
-Buttons,Walls,Players,Movables,Goals = [],[],[],[],[]
-PortalDict,SwitchDict,LeverDict = {},{},{}
-player1,player2,player1Goal,player2Goal = None,None,None,None
-keyPressed,performedAction = False, False
-
 #CLASS DEFINITIONS
-
 class Portal:
     def __init__(self,pos,portalNum):
         self.portalNum = portalNum
@@ -248,7 +228,7 @@ class Movable:
                 
     def validMove(self,dx,dy):
         return ( self.boundaryCheck(dx,dy) 
-                and ( not self.checkPlayerCollisions(dx,dy) 
+                and (not self.checkPlayerCollisions(dx,dy) 
                 and (not self.checkWallCollisions(dx,dy) ))
                 and (not self.checkSwitchCollisions(dx,dy)) 
                 and (not self.checkLeverCollisions(dx,dy)))
@@ -275,50 +255,45 @@ def terminate():
 def readLevelsFile(filename):
     assert os.path.exists(filename), 'Cannot find the level file: %s' % (filename)
     mapFile = open(filename, 'r')
-    # Each level must end with a blank line
+    # Each level must end with a blank line.
     content = mapFile.readlines() + ['\r\n']
     mapFile.close()
-    levels, portals = [],[]
-    mapLines, mapPortals = [],{}
+    levels, portals = [],[] #These will be filled and returned with the parsed information
+    mapLines, mapPortals = [],{} #Temporarily hold information about the current map
     for lineNum in range(len(content)):
         line = content[lineNum].rstrip('\r\n')
         if '>>' in line:
             #This line contains portal information
             portalData = line.strip('>')
-            key = int(portalData.split(":")[0])
-            portalLocations = []
-            for portalLocation in portalData.split(":")[1].split(";"):
+            key = int(portalData.split(":")[0]) 
+            portalLocations = [] 
+            for portalLocation in portalData.split(":")[1].split(";"): 
                 x,y = map(int, portalLocation.strip().replace('(', "").replace(')',"").split(',')) #value stripping
                 portalLocations.append((x,y))
+            assert(len(portalLocations) == 2), "Portal location provided is formatted incorrectly."
             mapPortals[key] = portalLocations
-        if '-' in line:
-            #This is the comment of a the levels file
+        if '-' in line: #Indicates a comment in the level file
             pass
-        if '%' in line: #This line is part of a level
+        elif '%' in line: #This line is part of a level
             mapLines.append(line)
+        #The map is finished, reset temporary variables and add map information to the return values
         elif line == '' and len(mapLines) > 0:
             portals.append(mapPortals)
             mapPortals = {}
             levels.append(mapLines)
-            mapLines = [] #reset it for the next level
+            mapLines = [] 
     
     return (levels,portals)
     
-def resetGlobals():
-    global xOffset,yOffset
+#TODO - Rewrite to find a better way to manage globals?
+def resetLevelVariables():
     global Players,Movables,Goals,Walls,Buttons,TILES
     global PortalDict, SwitchDict, LeverDict
     global player1,player2,player1Goal,player2Goal
-    xOffset,yOffset = 0,0
     player1,player2,player1Goal,player2Goal = None,None,None,None
-    PortalDict = {}
-    SwitchDict = {'red': [], 'green': [], 'purple': [], 'yellow':[]}
-    LeverDict = {'Lever1': []}
+    PortalDict,SwitchDict,LeverDict = {},{},{}
     Players,Movables,Goals,Walls,Buttons,TILES = [],[],[],[],[],[]
-    #TODO - MAYBE REWRITE THE SETS AND SWITCHES TO WORK LIKE PORTALS?
-    assert(set(Colors) == set(SwitchDict.keys()))   
-    assert(set(LeverNums) == set(LeverDict.keys()))
-
+   
 def appendToBucket(Dict, key, val):
     try:
         temp = Dict[key] #The key exists - get the existing bucket
@@ -327,7 +302,8 @@ def appendToBucket(Dict, key, val):
     temp.append(val)
     Dict[key] = temp
     
-def setupLevelPortals(levelNumber):
+def setupLevelPortals(levels, portals, levelNumber):
+    xOffset,yOffset = adjustOffsets(levels,levelNumber)
     this_levels_portals = portals[levelNumber]
     for key in this_levels_portals:
         portalLocations = this_levels_portals[key]
@@ -336,11 +312,12 @@ def setupLevelPortals(levelNumber):
             Portal((x*32+xOffset,y*32+yOffset),key)
             
 #Fills the map with the proper objects needed to display the level
-def populateLevel(levelNumber):
+def populateLevel(levels,portals,levelNumber):
     global player1,player2,player1Goal,player2Goal
-    resetGlobals()
-    (x,y) = adjustOffsets()
-    setupLevelPortals(levelNumber)
+    resetLevelVariables()
+    xOffset,yOffset = adjustOffsets(levels,levelNumber)
+    x,y = xOffset,yOffset
+    setupLevelPortals(levels,portals,levelNumber)
     
     for row in levels[levelNumber]:
         for col in row:
@@ -376,21 +353,19 @@ def populateLevel(levelNumber):
             elif col == "O":
                 Movable("rock",(x,y), False) 
                 
-            elif col == "9": #green switch
-                Switch((x,y),"green")
-            elif col == "(": #green button
-                Button((x,y),"green")
-            elif col == "8": #purple
+            #Buttons and Switch Walls
+            #TOOD - Fix shitty hardcoding
+            elif col == "p": 
                 Switch((x,y),"purple")
-            elif col == "*": #purple button
+            elif col == "P": 
                 Button((x,y),"purple")
-            elif col == "7": #red 
+            elif col == "r": 
                 Switch((x,y),"red")
-            elif col == "&": #red button
+            elif col == "R": 
                 Button((x,y),"red")
-            elif col == "6": #yellow
+            elif col == "y": 
                 Switch((x,y),"yellow")
-            elif col == "^": #yellow button
+            elif col == "Y": 
                 Button((x,y),"yellow")
                     
             elif col == "@":
@@ -403,7 +378,7 @@ def populateLevel(levelNumber):
                     assert(check)
                 except:
                     print "Level Design Error on Level {0}".format(levelNumber)
-                    print "Your level mapping and coordinate information does not coincide."
+                    print "Your level mapping and portal coordinate information does not coincide."
                     terminate()
                                  
             #Ensure that all maps have corresponding Levers!
@@ -426,8 +401,7 @@ def populateLevel(levelNumber):
         for p in Portals:
             p.findOtherPortal()
             
-def adjustOffsets():     
-    global xOffset,yOffset
+def adjustOffsets(levels,levelNumber):     
     levelHeight = len(levels[levelNumber])
     maxWidth = -1
     for row in levels[levelNumber]:
@@ -505,9 +479,10 @@ def fillScreen():
         
 
 def main():
-    global levelNumber, levels, keyPressed, FPSCLOCK, performAction, portals
+    global keyPressed, FPSCLOCK, performAction
+    levelNumber = 0
     levels, portals = readLevelsFile('levels.txt') #Populate the levels
-    populateLevel(0) #Start at level 0
+    populateLevel(levels,portals,0) #Start at level 0
     FPSCLOCK = pygame.time.Clock()
     while True: #Main game loop
         #Reset player movement
@@ -530,49 +505,41 @@ def main():
                 #Player 1
                 if keys[K_LEFT]:
                     player1.setDirection(LEFT)
-                    if not keys[K_LSHIFT]:
-                        player1.toMove = True
+                    player1.toMove = True
                 elif keys[K_RIGHT]:
                     player1.setDirection(RIGHT)
-                    if not keys[K_LSHIFT]:
-                        player1.toMove = True
+                    player1.toMove = True
                 elif keys[K_UP]:
                     player1.setDirection(UP)
-                    if not keys[K_LSHIFT]:
-                        player1.toMove = True
+                    player1.toMove = True
                 elif keys[K_DOWN]:
                     player1.setDirection(DOWN)
-                    if not keys[K_LSHIFT]:
-                        player1.toMove = True
+                    player1.toMove = True
                 #Player 2
                 if keys[K_a]:
                     player2.setDirection(LEFT)
-                    if not keys[K_LSHIFT]:
-                        player2.toMove = True
+                    player2.toMove = True
                 elif keys[K_d]:
                     player2.setDirection(RIGHT)
-                    if not keys[K_LSHIFT]:
-                        player2.toMove = True
+                    player2.toMove = True
                 elif keys[K_w]:
                     player2.setDirection(UP)
-                    if not keys[K_LSHIFT]:
-                        player2.toMove = True
+                    player2.toMove = True
                 elif keys[K_s]:
                     player2.setDirection(DOWN)
-                    if not keys[K_LSHIFT]:
-                        player2.toMove = True   
+                    player2.toMove = True   
                         
                 #Handle Actions and Level Navigation
                 elif keys[K_b]:
                     if (levelNumber -1 >= 0):
                         levelNumber -= 1
-                        populateLevel(levelNumber)
+                        populateLevel(levels,portals,levelNumber)
                 elif keys[K_n]:
                     if (levelNumber + 1 < len(levels)):
                         levelNumber += 1
-                        populateLevel(levelNumber)
+                        populateLevel(levels,portals,levelNumber)
                 elif keys[K_r]:
-                    populateLevel(levelNumber)
+                    populateLevel(levels,portals,levelNumber)
                 elif keys[K_SPACE]:
                     performAction = True
                      
@@ -580,12 +547,12 @@ def main():
         if (isLevelCompleted()):
             if (levelNumber + 1 < len(levels)):
                 levelNumber += 1
-                populateLevel(levelNumber)
+                populateLevel(levels,portals,levelNumber)
             else:
                 print "You beat the game!"
                 terminate()
             
-            #Update the display
+        #Update the display
         fillScreen()    
         pygame.display.update() 
         FPSCLOCK.tick(FPS)
